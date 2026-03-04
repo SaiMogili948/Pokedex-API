@@ -1,0 +1,591 @@
+import { useState, useEffect } from "react";
+
+const TYPE_COLORS = {
+  fire: "#FF6B35", water: "#4FC3F7", grass: "#81C784", electric: "#FFD54F",
+  psychic: "#F48FB1", ice: "#80DEEA", dragon: "#7E57C2", dark: "#546E7A",
+  fairy: "#F8BBD9", normal: "#BCAAA4", fighting: "#EF9A9A", flying: "#90CAF9",
+  poison: "#CE93D8", ground: "#FFCC80", rock: "#A5D6A7", bug: "#DCEDC8",
+  ghost: "#9575CD", steel: "#B0BEC5",
+};
+
+const typeColor = (type) => TYPE_COLORS[type] || "#999";
+
+const style = `
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body { background: #0a0a0f; }
+
+  .app {
+    min-height: 100vh;
+    background: #0a0a0f;
+    font-family: 'DM Sans', sans-serif;
+    color: #f0f0f0;
+    padding: 2rem 1rem 4rem;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+
+  .header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(3.5rem, 10vw, 7rem);
+    letter-spacing: 0.05em;
+    background: linear-gradient(135deg, #FF6B35, #FFD54F, #FF6B35);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer 3s linear infinite;
+    line-height: 1;
+  }
+
+  @keyframes shimmer {
+    to { background-position: 200% center; }
+  }
+
+  .header p {
+    color: #666;
+    font-size: 0.9rem;
+    font-weight: 300;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-top: 0.5rem;
+  }
+
+  .controls {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-bottom: 3rem;
+    flex-wrap: wrap;
+  }
+
+  .search-wrap {
+    position: relative;
+  }
+
+  .search-wrap input {
+    background: #161620;
+    border: 1px solid #2a2a3a;
+    border-radius: 2px;
+    color: #f0f0f0;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    padding: 0.75rem 1.25rem;
+    width: 260px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .search-wrap input:focus {
+    border-color: #FF6B35;
+  }
+
+  .search-wrap input::placeholder { color: #444; }
+
+  select {
+    background: #161620;
+    border: 1px solid #2a2a3a;
+    border-radius: 2px;
+    color: #f0f0f0;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    padding: 0.75rem 1.25rem;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+
+  select:focus { border-color: #FF6B35; }
+  select option { background: #161620; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1.25rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .card {
+    background: #161620;
+    border: 1px solid #1e1e2e;
+    border-radius: 4px;
+    padding: 1.5rem 1.25rem;
+    cursor: pointer;
+    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+    animation: fadeUp 0.4s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .card:hover {
+    transform: translateY(-4px);
+    border-color: #333;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+  }
+
+  .card:hover::before { opacity: 1; }
+
+  .card-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.85rem;
+    color: #333;
+    letter-spacing: 0.1em;
+    margin-bottom: 0.5rem;
+  }
+
+  .card img {
+    width: 100px;
+    height: 100px;
+    display: block;
+    margin: 0 auto 1rem;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.5));
+    transition: transform 0.3s;
+  }
+
+  .card:hover img { transform: scale(1.08) translateY(-4px); }
+
+  .card-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.3rem;
+    letter-spacing: 0.05em;
+    text-align: center;
+    margin-bottom: 0.75rem;
+    text-transform: capitalize;
+  }
+
+  .types {
+    display: flex;
+    gap: 0.4rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .type-badge {
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.25rem 0.6rem;
+    border-radius: 2px;
+  }
+
+  /* Modal */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 1rem;
+    animation: fadeIn 0.2s ease;
+    backdrop-filter: blur(4px);
+  }
+
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .modal {
+    background: #161620;
+    border: 1px solid #2a2a3a;
+    border-radius: 4px;
+    max-width: 480px;
+    width: 100%;
+    padding: 2rem;
+    position: relative;
+    animation: popIn 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  }
+
+  @keyframes popIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 1rem; right: 1rem;
+    background: none;
+    border: 1px solid #2a2a3a;
+    color: #666;
+    width: 32px; height: 32px;
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: color 0.2s, border-color 0.2s;
+  }
+
+  .modal-close:hover { color: #f0f0f0; border-color: #666; }
+
+  .modal-img {
+    width: 140px; height: 140px;
+    display: block; margin: 0 auto 1.5rem;
+    filter: drop-shadow(0 8px 24px rgba(0,0,0,0.5));
+  }
+
+  .modal-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.5rem;
+    text-align: center;
+    text-transform: capitalize;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+  }
+
+  .modal-num {
+    text-align: center;
+    color: #444;
+    font-size: 0.85rem;
+    letter-spacing: 0.15em;
+    margin-bottom: 1rem;
+  }
+
+  .modal-types { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 1.5rem; }
+
+  .stats { display: flex; flex-direction: column; gap: 0.6rem; }
+
+  .stat-row { display: flex; align-items: center; gap: 0.75rem; }
+
+  .stat-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #555;
+    width: 70px;
+    flex-shrink: 0;
+  }
+
+  .stat-bar-bg {
+    flex: 1;
+    height: 4px;
+    background: #1e1e2e;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .stat-bar {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  .stat-val {
+    font-size: 0.8rem;
+    color: #888;
+    width: 30px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .modal-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: #0f0f18;
+    border-radius: 2px;
+  }
+
+  .info-item { text-align: center; }
+  .info-label { font-size: 0.7rem; letter-spacing: 0.12em; color: #444; text-transform: uppercase; }
+  .info-val { font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem; margin-top: 0.2rem; }
+
+  /* States */
+  .loading {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    min-height: 300px; gap: 1rem;
+  }
+
+  .spinner {
+    width: 40px; height: 40px;
+    border: 2px solid #1e1e2e;
+    border-top-color: #FF6B35;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading p { color: #444; font-size: 0.85rem; letter-spacing: 0.15em; text-transform: uppercase; }
+
+  .error {
+    text-align: center; padding: 3rem 1rem;
+  }
+
+  .error h2 { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: #FF6B35; margin-bottom: 0.5rem; }
+  .error p { color: #555; margin-bottom: 1.5rem; }
+
+  .btn {
+    background: #FF6B35;
+    border: none;
+    color: #fff;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.75rem 2rem;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+
+  .btn:hover { opacity: 0.85; }
+
+  .empty {
+    grid-column: 1/-1;
+    text-align: center;
+    padding: 3rem;
+    color: #333;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    letter-spacing: 0.1em;
+  }
+
+  .count {
+    text-align: center;
+    color: #333;
+    font-size: 0.8rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+  }
+
+  .skeleton {
+    background: #161620;
+    border: 1px solid #1e1e2e;
+    border-radius: 4px;
+    padding: 1.5rem 1.25rem;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .skel-circle { width: 100px; height: 100px; background: #1e1e2e; border-radius: 50%; margin: 0 auto 1rem; }
+  .skel-line { background: #1e1e2e; border-radius: 2px; margin: 0 auto; }
+
+  @media (max-width: 480px) {
+    .grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+    .controls input { width: 100%; }
+    .controls { flex-direction: column; align-items: center; }
+  }
+`;
+
+const STAT_COLORS = {
+  hp: "#FF6B35", attack: "#FFD54F", defense: "#4FC3F7",
+  "special-attack": "#CE93D8", "special-defense": "#81C784", speed: "#80DEEA"
+};
+
+function SkeletonCard() {
+  return (
+    <div className="skeleton">
+      <div className="skel-circle" />
+      <div className="skel-line" style={{ width: "60%", height: 20, marginBottom: 10 }} />
+      <div className="skel-line" style={{ width: "40%", height: 14 }} />
+    </div>
+  );
+}
+
+function PokemonModal({ pokemon, onClose }) {
+  if (!pokemon) return null;
+  const mainType = pokemon.types[0].type.name;
+  const accent = typeColor(mainType);
+
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <button className="modal-close" onClick={onClose}>✕</button>
+        <img
+          className="modal-img"
+          src={pokemon.sprites.other["official-artwork"].front_default || pokemon.sprites.front_default}
+          alt={pokemon.name}
+        />
+        <div className="modal-num">#{String(pokemon.id).padStart(4, "0")}</div>
+        <div className="modal-name">{pokemon.name}</div>
+        <div className="modal-types">
+          {pokemon.types.map(t => (
+            <span key={t.type.name} className="type-badge"
+              style={{ background: typeColor(t.type.name) + "22", color: typeColor(t.type.name), border: `1px solid ${typeColor(t.type.name)}44` }}>
+              {t.type.name}
+            </span>
+          ))}
+        </div>
+        <div className="modal-info">
+          <div className="info-item">
+            <div className="info-label">Height</div>
+            <div className="info-val">{(pokemon.height / 10).toFixed(1)}m</div>
+          </div>
+          <div className="info-item">
+            <div className="info-label">Weight</div>
+            <div className="info-val">{(pokemon.weight / 10).toFixed(1)}kg</div>
+          </div>
+        </div>
+        <div className="stats">
+          {pokemon.stats.map(s => (
+            <div key={s.stat.name} className="stat-row">
+              <span className="stat-label">{s.stat.name}</span>
+              <div className="stat-bar-bg">
+                <div className="stat-bar"
+                  style={{ width: `${Math.min(100, (s.base_stat / 255) * 100)}%`, background: STAT_COLORS[s.stat.name] || accent }} />
+              </div>
+              <span className="stat-val">{s.base_stat}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function App() {
+  const [pokemon, setPokemon] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [selected, setSelected] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  const fetchPokemon = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("https://pokeapi.co/api/v2/pokemon?limit=150");
+      if (!res.ok) throw new Error("Failed to fetch");
+      const data = await res.json();
+
+      const details = await Promise.all(
+        data.results.map(p => fetch(p.url).then(r => r.json()))
+      );
+      setPokemon(details);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchPokemon(); }, []);
+
+  const allTypes = [...new Set(pokemon.flatMap(p => p.types.map(t => t.type.name)))].sort();
+
+  const filtered = pokemon.filter(p => {
+    const matchSearch = p.name.includes(search.toLowerCase());
+    const matchType = typeFilter === "all" || p.types.some(t => t.type.name === typeFilter);
+    return matchSearch && matchType;
+  });
+
+  const openModal = async (p) => {
+    setSelected(p);
+  };
+
+  return (
+    <>
+      <style>{style}</style>
+      <div className="app">
+        <div className="header">
+          <h1>Pokédex</h1>
+          <p>First Generation · 150 Pokémon</p>
+        </div>
+
+        {!loading && !error && (
+          <div className="controls">
+            <div className="search-wrap">
+              <input
+                placeholder="Search Pokémon..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+            </div>
+            <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
+              <option value="all">All Types</option>
+              {allTypes.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
+            </select>
+          </div>
+        )}
+
+        {!loading && !error && (
+          <p className="count">{filtered.length} Pokémon found</p>
+        )}
+
+        {loading && (
+          <div>
+            <div className="loading">
+              <div className="spinner" />
+              <p>Loading Pokémon...</p>
+            </div>
+            <div className="grid" style={{ maxWidth: 1200, margin: "0 auto" }}>
+              {Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} />)}
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="error">
+            <h2>Connection Error</h2>
+            <p>Could not reach the Pokémon API. Check your connection.</p>
+            <button className="btn" onClick={fetchPokemon}>Try Again</button>
+          </div>
+        )}
+
+        {!loading && !error && (
+          <div className="grid">
+            {filtered.length === 0 && (
+              <div className="empty">No Pokémon Found</div>
+            )}
+            {filtered.map((p, i) => {
+              const mainType = p.types[0].type.name;
+              const accent = typeColor(mainType);
+              return (
+                <div key={p.id} className="card"
+                  style={{ animationDelay: `${Math.min(i, 20) * 0.03}s`, "--accent": accent }}
+                  onClick={() => openModal(p)}>
+                  <div className="card-num">#{String(p.id).padStart(4, "0")}</div>
+                  <img
+                    src={p.sprites.other["official-artwork"].front_default || p.sprites.front_default}
+                    alt={p.name}
+                    loading="lazy"
+                  />
+                  <div className="card-name">{p.name}</div>
+                  <div className="types">
+                    {p.types.map(t => (
+                      <span key={t.type.name} className="type-badge"
+                        style={{ background: typeColor(t.type.name) + "22", color: typeColor(t.type.name) }}>
+                        {t.type.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {selected && <PokemonModal pokemon={selected} onClose={() => setSelected(null)} />}
+      </div>
+    </>
+  );
+}
